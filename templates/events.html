@@ -2,63 +2,148 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Existing Events</title>
+  <title>Event Reporter - Events</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="p-5">
-<div class="container">
-  <a href="/" class="btn btn-secondary mb-4">Back</a>
+<body class="p-4">
 
-  <h2>Existing Events</h2>
-  {% if message %}
-    <div class="alert alert-success">{{ message }}</div>
-  {% endif %}
+  <div class="container" style="max-width:1000px">
+    <h1 class="mb-4">📅 Events</h1>
 
-  <div class="row">
-    {% for e in events %}
-      <div class="col-md-6 mb-3">
-        <div class="card p-3">
-          <h5>{{ e.title }}</h5>
-          <p>Type: {{ e.type }} | Date: {{ e.date }} | Capacity: {{ e.capacity }} | ID: {{ e.id }}</p>
-          <form method="post">
-            <input type="hidden" name="event_id" value="{{ e.id }}">
-            <input type="text" name="name" placeholder="Your Name" class="form-control mb-1" required>
-            <input type="email" name="email" placeholder="Email" class="form-control mb-1" required>
-            <button type="submit" class="btn btn-primary btn-sm">Register</button>
-          </form>
+    {% if message %}
+      <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
 
-          <h6 class="mt-3">Registered Students:</h6>
-          <ul class="list-group">
-            {% for r in reg_data %}
-              {% if r.event_title == e.title %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                  {{ r.student_name }} (ID: {{ r.reg_id }})
-                  <div>
-                    {% if not r.attendance %}
-                      <form action="/mark_attendance/{{ r.reg_id }}" method="post" class="d-inline">
-                        <button class="btn btn-warning btn-sm">Mark Attendance</button>
-                      </form>
-                    {% else %}
-                      <span class="badge bg-success">Present</span>
-                    {% endif %}
-                    {% if not r.feedback %}
-                      <form action="/submit_feedback/{{ r.reg_id }}" method="post" class="d-inline ms-2">
-                        <input type="number" name="rating" min="1" max="5" class="form-control d-inline" placeholder="Rating 1-5" style="width:80px">
-                        <button class="btn btn-info btn-sm">Submit Feedback</button>
-                      </form>
-                    {% else %}
-                      <span class="badge bg-info">Feedback: {{ r.feedback }}</span>
-                    {% endif %}
-                  </div>
-                </li>
-              {% endif %}
-            {% endfor %}
-          </ul>
-
-        </div>
+    <!-- User Info -->
+    {% if session.get('role') %}
+      <div class="alert alert-info">
+        Logged in as <b>{{ session.get('role')|capitalize }}</b>
+        {% if session.get('role') == 'student' %}
+          ({{ session.get('student_name') }} - {{ session.get('student_email') }})
+        {% endif %}
       </div>
-    {% endfor %}
+      <form action="{{ url_for('logout') }}" method="get" class="mb-3">
+        <button type="submit" class="btn btn-danger">Logout</button>
+      </form>
+    {% else %}
+      <form action="{{ url_for('login') }}" method="get" class="mb-3">
+        <button type="submit" class="btn btn-primary">Login</button>
+      </form>
+    {% endif %}
+
+    <!-- Events Table -->
+    <h3>Available Events</h3>
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Type</th>
+          <th>Date</th>
+          <th>Capacity</th>
+          {% if session.get('role') == 'student' %}
+            <th>Action</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+          <tr>
+            <td>{{ e.title }}</td>
+            <td>{{ e.type }}</td>
+            <td>{{ e.date }}</td>
+            <td>{{ e.capacity }}</td>
+            {% if session.get('role') == 'student' %}
+              <td>
+                <form method="post">
+                  <input type="hidden" name="event_id" value="{{ e.id }}">
+                  <button class="btn btn-sm btn-success">Register</button>
+                </form>
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <hr>
+
+    <!-- Registrations Table -->
+    <h3>Registrations</h3>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Email</th>
+          <th>Event</th>
+          <th>Attendance</th>
+          <th>Feedback</th>
+          {% if session.get('role') == 'admin' %}
+            <th>Actions (Admin)</th>
+          {% elif session.get('role') == 'student' %}
+            <th>Actions (Student)</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reg_data %}
+          <tr>
+            <td>{{ r.student_name }}</td>
+            <td>{{ r.student_email }}</td>
+            <td>{{ r.event_title }}</td>
+            <td>
+              {% if r.attendance is none %}
+                Not Marked
+              {% elif r.attendance %}
+                ✅ Present
+              {% else %}
+                ❌ Absent
+              {% endif %}
+            </td>
+            <td>
+              {% if r.feedback %}
+                ⭐ {{ r.feedback }}/5
+              {% else %}
+                Not Submitted
+              {% endif %}
+            </td>
+
+            {% if session.get('role') == 'admin' %}
+              <td>
+                {% if not r.attendance %}
+                  <form method="post" action="{{ url_for('mark_attendance', reg_id=r.reg_id) }}">
+                    <button type="submit" class="btn btn-sm btn-dark">Mark Present</button>
+                  </form>
+                {% endif %}
+              </td>
+            {% endif %}
+
+            {% if session.get('role') == 'student' and session.get('student_email') == r.student_email %}
+              <td>
+                {% if not r.feedback %}
+                  <form method="post" action="{{ url_for('submit_feedback', reg_id=r.reg_id) }}">
+                    <select name="rating" class="form-select form-select-sm mb-1" required>
+                      <option value="">Rate</option>
+                      <option value="1">1 ⭐</option>
+                      <option value="2">2 ⭐⭐</option>
+                      <option value="3">3 ⭐⭐⭐</option>
+                      <option value="4">4 ⭐⭐⭐⭐</option>
+                      <option value="5">5 ⭐⭐⭐⭐⭐</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+                  </form>
+                {% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Back to Home Button -->
+    <form action="{{ url_for('index') }}" method="get">
+      <button type="submit" class="btn btn-secondary">⬅ Back to Home</button>
+    </form>
   </div>
-</div>
+
 </body>
 </html>

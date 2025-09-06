@@ -1,15 +1,19 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from functools import wraps
 import os
 
 app = Flask(__name__)
 db_path = os.path.join(os.path.dirname(__file__), 'events.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret')  # Needed for sessions
 db = SQLAlchemy(app)
 
-# Models
+# ===============================
+# MODELS
+# ===============================
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
@@ -41,12 +45,65 @@ class Feedback(db.Model):
 with app.app_context():
     db.create_all()
 
-# Home Page
+# ===============================
+# ROLE-BASED ACCESS CONTROL
+# ===============================
+def require_role(*roles):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if session.get('role') in roles:
+                return f(*args, **kwargs)
+            return abort(403)
+        return wrapper
+    return decorator
+
+# ===============================
+# AUTH ROUTES
+# ===============================
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        mode = request.form.get('mode')
+
+        if mode == 'admin':
+            pwd = request.form.get('password', '')
+            admin_pwd = os.environ.get('ADMIN_PASSWORD', 'admin123')
+            if pwd == admin_pwd:
+                session['role'] = 'admin'
+                flash('Logged in as Admin', 'success')
+                return redirect(url_for('index'))
+            else:
+                flash('Invalid admin password', 'danger')
+
+        elif mode == 'student':
+            name = request.form.get('name', '').strip()
+            email = request.form.get('email', '').strip()
+            if name and email:
+                session['role'] = 'student'
+                session['student_name'] = name
+                session['student_email'] = email
+                flash('Logged in as Student', 'success')
+                return redirect(url_for('events'))
+            else:
+                flash('Provide both name and email', 'danger')
+
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Logged out', 'info')
+    return redirect(url_for('index'))
+
+# ===============================
+# MAIN ROUTES
+# ===============================
 @app.route('/')
 def index():
     return render_template('home.html')
 
-# Create Event
+@require_role('admin')
 @app.route('/create_event', methods=['GET', 'POST'])
 def create_event():
     if request.method == 'POST':
@@ -60,29 +117,34 @@ def create_event():
         return render_template('create_event.html', success=True)
     return render_template('create_event.html')
 
-# Existing Events / Student Registration
 @app.route('/events', methods=['GET', 'POST'])
 def events():
     events_list = Event.query.all()
     message = None
     if request.method == 'POST':
-        # Register student
-        name = request.form['name']
-        email = request.form['email']
+        # Require student role
+        if session.get('role') != 'student':
+            return abort(403)
+
+        name = session.get('student_name')
+        email = session.get('student_email')
         event_id = int(request.form['event_id'])
+
         student = Student.query.filter_by(email=email).first()
         if not student:
             student = Student(name=name, email=email)
             db.session.add(student)
             db.session.commit()
-        # Check duplicate registration
+
+        # Prevent duplicate registration
         reg = Registration.query.filter_by(student_id=student.id, event_id=event_id).first()
         if not reg:
             reg = Registration(student_id=student.id, event_id=event_id)
             db.session.add(reg)
             db.session.commit()
             message = f"{student.name} registered successfully!"
-    # Load registrations for display
+
+    # Load registrations
     registrations = Registration.query.all()
     reg_data = []
     for r in registrations:
@@ -100,7 +162,7 @@ def events():
         })
     return render_template('events.html', events=events_list, reg_data=reg_data, message=message)
 
-# Mark attendance (admin)
+@require_role('admin')
 @app.route('/mark_attendance/<int:reg_id>', methods=['POST'])
 def mark_attendance(reg_id):
     att = Attendance.query.filter_by(registration_id=reg_id).first()
@@ -112,7 +174,7 @@ def mark_attendance(reg_id):
     db.session.commit()
     return ('', 204)
 
-# Submit feedback (student)
+@require_role('student')
 @app.route('/submit_feedback/<int:reg_id>', methods=['POST'])
 def submit_feedback(reg_id):
     rating = int(request.form['rating'])
@@ -125,5 +187,8 @@ def submit_feedback(reg_id):
     db.session.commit()
     return ('', 204)
 
+# ===============================
+# RUN
+# ===============================
 if __name__ == '__main__':
     app.run(debug=True)

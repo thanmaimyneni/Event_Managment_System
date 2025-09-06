@@ -2,14 +2,104 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Event Reporter</title>
+  <title>Event Reporter - Home</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #fdf6f0; 
+      font-family: "Segoe UI", sans-serif;
+    }
+    .container {
+      max-width: 800px;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #6d597a; 
+    }
+    .btn-custom {
+      border-radius: 20px;
+      padding: 10px 20px;
+      font-weight: 500;
+    }
+    .btn-primary {
+      background-color: #0ba4a9;
+      border: none;
+    }
+    .btn-primary:hover {
+      background-color: #87b6b8;
+    }
+    .btn-success {
+      background-color: #07792f; 
+      border: none;
+    }
+    .btn-success:hover {
+      background-color: #95d5b2;
+    }
+    .btn-outline-primary {
+      border-color: #a5c9ca;
+      color: #6d597a;
+    }
+    .btn-outline-primary:hover {
+      background-color: #a5c9ca;
+      color: white;
+    }
+    .alert-info {
+      background-color: #e4c1f9; 
+      border: none;
+      color: #4a4a4a;
+    }
+  </style>
 </head>
-<body class="p-5">
-  <div class="container text-center">
-    <h1 class="mb-5">Event Reporter</h1>
-    <a href="/create_event" class="btn btn-success btn-lg m-3">Create Event</a>
-    <a href="/events" class="btn btn-primary btn-lg m-3">Existing Events</a>
+<body class="p-4">
+
+  <div class="container">
+    <h1 class="mb-4 text-center">🎉 Welcome to Event Reporter</h1>
+
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{category}}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+   
+    {% if session.get('role') %}
+      <div class="alert alert-info text-center">
+        Logged in as <b>{{ session.get('role')|capitalize }}</b>
+        {% if session.get('role') == 'student' %}
+          <br>({{ session.get('student_name') }} - {{ session.get('student_email') }})
+        {% endif %}
+      </div>
+      <form action="{{ url_for('logout') }}" method="get" class="d-flex justify-content-center mb-3">
+        <button type="submit" class="btn btn-danger btn-custom">Logout</button>
+      </form>
+    {% else %}
+      <form action="{{ url_for('login') }}" method="get" class="d-flex justify-content-center mb-3">
+        <button type="submit" class="btn btn-primary btn-custom">Login</button>
+      </form>
+    {% endif %}
+
+    <hr>
+
+   
+    <div class="d-flex justify-content-center gap-3">
+      <form action="{{ url_for('events') }}" method="get">
+        <button type="submit" class="btn btn-outline-primary btn-custom">📅 View Events</button>
+      </form>
+
+      {% if session.get('role') == 'admin' %}
+        <form action="{{ url_for('create_event') }}" method="get">
+          <button type="submit" class="btn btn-success btn-custom">Create Event</button>
+        </form>
+      {% endif %}
+    </div>
   </div>
+
 </body>
 </html>
