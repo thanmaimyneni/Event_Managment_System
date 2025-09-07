@@ -1,47 +1,86 @@
 
-# Campus Event Reporting Prototype (Flask)
+#### Campus Event Reporting Prototype
 
-**Important:** The assignment's README requested must be *written personally* by you (the student). 
-I have added a README template below; please edit the "My understanding" section in your own words before submission.
+This is a Flask-based web application that helps manage events, registrations, feedback, and attendance. The system supports two types of users: Admin and Student, with different access levels.
+Features
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## Admin
 
-## What I built
-- A small Flask app with SQLite storing colleges, events, students, registrations, attendance, and feedback.
-- APIs to create events, register students, mark attendance, submit feedback.
-- Reporting endpoints: registrations, attendance percentage, average feedback, event popularity, student participation, top 3 active students.
+Create and manage events
+Mark student attendance
+View feedback submitted by students
 
-## Quick start (run locally)
-1. Install dependencies:
-   ```
+## Student
+
+Register for events
+Submit feedback for attended events
+
+## Tech Stack
+
+Backend: Flask (Python)
+Database: SQLite
+Frontend: HTML (Jinja2 templates), CSS (custom)
+Version Control: Git & GitHub
+
+## Installation & Running Locally
+
+1.Navigate into the project folder:
+   cd Event_Managment_System
+   
+2.Create a virtual environment
+   python -m venv venv
+   venv\Scripts\activate (for windows)
+   
+3.Install dependencies
    pip install -r requirements.txt
-   ```
-2. Run the app:
-   ```
+
+4.Initialize the database
+
+5.Run the app
    python app.py
-   ```
-   The app will start on `http://127.0.0.1:5000/`.
-3. The SQLite DB `events.db` will be created automatically on first run with sample data.
+   
+## webiste link after running app.py
 
-## API examples
-- Create event:
-  `POST /api/events` JSON body: `{"title":"New Event","type":"Workshop","date":"2025-09-20","capacity":100}`
-- Register:
-  `POST /api/register` JSON: `{"name":"Charlie","email":"charlie@example.com","event_id":1}`
-- Mark attendance:
-  `POST /api/attendance` JSON: `{"registration_id":1,"present":true}`
-- Feedback:
-  `POST /api/feedback` JSON: `{"registration_id":1,"rating":5}`
+http://127.0.0.1:5000
 
-## Reports (GET)
-- `/api/reports/registrations`
-- `/api/reports/attendance/<event_id>`
-- `/api/reports/avg_feedback/<event_id>`
-- `/api/reports/event_popularity`
-- `/api/reports/student_participation`
-- `/api/reports/top_active_students`
+## Roles
 
-## My understanding (PLEASE EDIT)
-*(Write this part in your own words — do not paste AI-generated content)*
-- Explain what the system does, assumptions you made, and any deviations from the brief.
+Admin → Can create events and mark attendance
+Student → Can register for events and submit feedback
 
-## Notes
-- The assignment requires that the README be your own writing. I generated the code and scaffolding for you — please fill the personal sections before submission.
+## Future Improvements
+
+User registration & authentication through UI
+Export attendance and feedback reports
+Email/SMS notifications for event updates
+Better UI with responsive design
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## Project Structure
+
+Event_Managment_System/
+│
+├── app.py                 Main Flask application
+├── events.db              SQLite database
+├── requirements.txt       Project dependencies
+├── templates/             HTML templates (Jinja2)
+│   ├── index.html
+│   ├── login.html
+│   ├── create_event.html
+│   └── ...
+├── static/                CSS, JS, images
+└── README.md              Documentation
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## API Endpoints
+
++-------------------------------------------------------------------------------------------------+
+| Endpoint	                             Method	     Role	              Description             |
+|-------------------------------------------------------------------------------------------------|
+| /login	                                POST         All	       Login with username & password |
+| /create_event	                       POST	     Admin	          Create a new event          |
+| /register/<event_id>	                 GET	        Student	       Register for an event       |
+| /submit_feedback/<event_id>	           POST	     Student	         Submit feedback           |
+| /mark_attendance/<event_id>            GET	        Admin	         Mark student attendance      |
+| /<student_id>                                                                                   |                                                                       
+---------------------------------------------------------------------------------------------------
+
